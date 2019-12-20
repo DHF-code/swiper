@@ -1,12 +1,18 @@
+import logging
+
 from django.core.cache import cache
 
 from common import stat
+from common import keys
+from libs.cache import rds
 from user import logics
 from user.models import User
 from user.models import Profile
 from user.forms import UserForm
 from user.forms import ProfileForm
 from libs.http import render_json
+
+inf_log = logging.getLogger('inf')
 
 
 def get_vcode(request):
@@ -16,7 +22,7 @@ def get_vcode(request):
     if status:
         return render_json()
     else:
-        return render_json(code=stat.SEND_SMS_ERR)
+        raise stat.SendSmsErr
 
 
 def submit_vcode(request):
@@ -24,26 +30,38 @@ def submit_vcode(request):
     phonenum = request.POST.get('phonenum')
     vcode = request.POST.get('vcode')
 
-    cached_vcode = cache.get('Vcode-%s' % phonenum)  # 取出缓存的验证码
+    cached_vcode = cache.get(keys.VCODE_K % phonenum)  # 取出缓存的验证码
 
     # 检查验证码是否正确
     if vcode and vcode == cached_vcode:
         try:
             user = User.objects.get(phonenum=phonenum)
+            inf_log.info('%s login with id %s' % (user.nickname, user.id))
         except User.DoesNotExist:
             user = User.objects.create(phonenum=phonenum)  # 创建用户
+            inf_log.info('new user: %s' % user.id)
 
         # 执行登陆过程
         request.session['uid'] = user.id
         return render_json(user.to_dict())
     else:
-        return render_json(code=stat.VCODE_ERR)
+        raise stat.VcodeErr
 
 
 def get_profile(request):
     '''获取个人资料'''
-    profile, _ = Profile.objects.get_or_create(id=request.uid)
-    return render_json(profile.to_dict())
+    key = keys.PROFILE_K % request.uid
+    result = rds.get(key)
+    print('从缓存获取: %s' % result)
+
+    if result is None:
+        profile, _ = Profile.objects.get_or_create(id=request.uid)
+        result = profile.to_dict()
+        print('从数据库获取: %s' % result)
+
+        rds.set(key, result, 1000)  # 将数据写入缓存
+        print('将数据写入缓存')
+    return render_json(result)
 
 
 def set_profile(request):
@@ -53,13 +71,18 @@ def set_profile(request):
 
     # 检查数据有效性
     if not user_form.is_valid():
-        return render_json(user_form.errors, stat.USER_FORM_ERR)
+        raise stat.UserFormErr(user_form.errors)
+
     if not profile_form.is_valid():
-        return render_json(profile_form.errors, stat.PROFILE_FORM_ERR)
+        raise stat.ProfileFormErr(profile_form.errors)
 
     # 保存数据
     User.objects.filter(id=request.uid).update(**user_form.cleaned_data)
     Profile.objects.filter(id=request.uid).update(**profile_form.cleaned_data)
+
+    # 删除旧的缓存
+    key = keys.PROFILE_K % request.uid
+    rds.delete(key)
 
     # 文强 + 程超 的思路
     # user = User.objects.get(id=request.uid)

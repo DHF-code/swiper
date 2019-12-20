@@ -1,6 +1,10 @@
 '''程序设计要有前瞻性，但是不要过早优化'''
 
+import datetime
+
 from django.db import models
+
+from vip.models import Vip
 
 
 class User(models.Model):
@@ -24,22 +28,24 @@ class User(models.Model):
     location = models.CharField(max_length=15, choices=LOCATION, default='上海', verbose_name='常居地')
     avatar = models.CharField(max_length=256, verbose_name='个人形象')
 
+    vip_id = models.IntegerField(default=1, verbose_name='用户对应的会员 ID')
+    vip_end = models.DateTimeField(default='3000-1-1', verbose_name='会员过期时间')
+
     @property
     def profile(self):
         if not hasattr(self, '_profile'):
             self._profile, _ = Profile.objects.get_or_create(id=self.id)
         return self._profile
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'phonenum': self.phonenum,
-            'nickname': self.nickname,
-            'gender': self.gender,
-            'birthday': str(self.birthday),
-            'location': self.location,
-            'avatar': self.avatar,
-        }
+    @property
+    def vip(self):
+        if not hasattr(self, '_vip'):
+            self._vip = Vip.objects.get(id=self.vip_id)
+        return self._vip
+
+    def is_vip_expired(self):
+        '''检查自己的会员是否已经过期'''
+        return datetime.datetime.now() >= self.vip_end
 
 
 class Profile(models.Model):
@@ -53,17 +59,3 @@ class Profile(models.Model):
     vibration = models.BooleanField(default=True, verbose_name='是否开启震动')
     only_matche = models.BooleanField(default=True, verbose_name='不让未匹配的人看我的相册')
     auto_play = models.BooleanField(default=True, verbose_name='自动播放视频')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'dating_gender': self.dating_gender,
-            'dating_location': self.dating_location,
-            'min_distance': self.min_distance,
-            'max_distance': self.max_distance,
-            'min_dating_age': self.min_dating_age,
-            'max_dating_age': self.max_dating_age,
-            'vibration': self.vibration,
-            'only_matche': self.only_matche,
-            'auto_play': self.auto_play,
-        }

@@ -2,6 +2,26 @@
 程序逻辑配置和第三方平台配置
 '''
 
+# Redis 配置
+REDIS = {
+    'host': 'localhost',
+    'port': 6379,
+    'db': 5,
+}
+
+
+HOT_RANK_SCORE = {
+    'like': 5,
+    'superlike': 7,
+    'dislike': -5,
+}
+
+
+# 反悔的配置
+REWIND_TIMES = 3  # 每天反悔次数
+REWIND_TIMEOUT = 60 * 5  # 反悔的超时时间
+
+
 # 云之讯短信平台配置
 YZX_SMS_API = 'https://open.ucpaas.com/ol/sms/sendsms'
 YZX_SMS_ARGS = {
@@ -13,7 +33,7 @@ YZX_SMS_ARGS = {
     "mobile": None,
 }
 
-# 七牛云接口配置
+
 QN_AK = 'kEM0sRR-meB92XU43_a6xZqhiyyTuu5yreGCbFtw'
 QN_SK = 'QxTKqgnOb_UVldphU261qu9IdzmjkgGHh6GQVPPy'
 QN_BUCKET_NAME = 'sh1905'

@@ -14,5 +14,4 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "swiper.settings")
 
 celery_app = Celery('async_tasks')
 celery_app.config_from_object(config)
-# 自动去Django的任务队列（redis）中拿
 celery_app.autodiscover_tasks()

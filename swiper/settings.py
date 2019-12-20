@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '91!ha#!=4y18xjiza!3(foq^^wkjz2u*_#n0&%8drpocs*!fe4'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'user',
+    'social',
+    'vip',
 ]
 
 MIDDLEWARE = [
@@ -46,6 +48,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     'common.middleware.AuthMiddleware',
+    'common.middleware.LogicErrMiddleware',
 ]
 
 ROOT_URLCONF = 'swiper.urls'
@@ -74,8 +77,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'swiper',
-        'USER': 'dhf',
-        'PASSWORD': '123456',
+        'USER': 'root',
+        'PASSWORD': '54188',
         'HOST': 'localhost',
         'PORT': 3306,
     }
@@ -119,3 +122,61 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/1.11/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# 日志配置
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    # 格式配置
+    'formatters': {
+        'simple': {
+            'format': '%(asctime)s %(module)s.%(funcName)s: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'verbose': {
+            'format': ('%(asctime)s %(levelname)s [%(process)d-%(threadName)s] '
+                    '%(module)s.%(funcName)s line %(lineno)d: %(message)s'),
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        }
+    },
+    # Handler 配置
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG' if DEBUG else 'ERROR'
+        },
+        'info': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': '%s/logs/info.log' % BASE_DIR,  # 日志保存路径
+            'when': 'D',        # 每天切割日志
+            'backupCount': 30,  # 日志保留 30 天
+            'formatter': 'simple',
+            'level': 'DEBUG' if DEBUG else 'INFO',
+        },
+        'error': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': '%s/logs/error.log' % BASE_DIR,  # 日志保存路径
+            'when': 'W0',      # 每周一切割日志
+            'backupCount': 4,  # 日志保留 4 周
+            'formatter': 'verbose',
+            'level': 'ERROR',
+        }
+    },
+    # Logger 配置
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+        },
+        'inf': {
+            'handlers': ['info'],
+            'propagate': True,
+            'level': 'DEBUG' if DEBUG else 'INFO',
+        },
+        'err': {
+            'handlers': ['error'],
+            'propagate': True,
+            'level': 'ERROR',
+        }
+    }
+}
